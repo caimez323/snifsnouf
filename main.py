@@ -5,6 +5,18 @@ from dotenv import load_dotenv
 import requests
 from bs4 import BeautifulSoup
 
+#Import for web sync
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import db
+
+#credit.json
+cred = credentials.Certificate('var/config.json')
+firebase_admin.initialize_app(cred, {
+  "databaseURL": "https://snifsnoufdataconnect-default-rtdb.europe-west1.firebasedatabase.app/",
+})
+ref = db.reference('/')  # starting point
+
 
 def count_a_tags(url):
     try:
@@ -40,6 +52,9 @@ bot_prefix = "$"
 #Quand on tape une commande, on vient regarder dans la liste ici, et si besoin on rajoute dans le mainList.json en l'écrasant complètement
 
 
+def syncroFireBase(currList):
+    for index,name in enumerate(currList):
+        ref.child(str(index)).set(name)
 
 def initList():
     with open("mainList.json","r") as jsonFile:
@@ -109,10 +124,11 @@ async def on_message(message):
     if message.content == bot_prefix+'isWebUp' or message.content == bot_prefix+'iwu':
         displayString = "Site web à jour" if isWebsiteUp(mainList) else "Le site n'est pas à jour, appelez Batman"
         await message.channel.send(displayString)
-    
-    
+    #TODO CHANGE ACCORDING TO DATAS IN FIREBASE DATABASE RATHER THAN SCRAPPING
 
-
+    if message.content == bot_prefix+'dataSync':
+        syncroFireBase(mainList)
+        await message.channel.send("Données du bot syncronisées avec le site")
     
 
 # Lancer le bot
