@@ -1,9 +1,5 @@
-import os
-import discord
-import json
+import os, discord
 from dotenv import load_dotenv
-import requests
-from bs4 import BeautifulSoup
 
 #Import for web sync
 import firebase_admin
@@ -31,24 +27,6 @@ firebase_admin.initialize_app(cred, {
   "databaseURL": "https://snifsnoufdataconnect-default-rtdb.europe-west1.firebasedatabase.app/",
 })
 ref = db.reference('/')  # starting point
-
-
-def count_a_tags(url):
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-
-        # Parser le contenu HTML
-        soup = BeautifulSoup(response.text, 'html.parser')
-        a_tags = soup.find_all('a')
-        return len(a_tags)
-    
-    except requests.RequestException as e:
-        print(f"Une erreur est survenue : {e}")
-        return 0
-    
-def isWebsiteUp(currList):
-    return len(currList) == count_a_tags("https://caimez323.github.io/src/snifsnouf.html")
 
 # Créer une instance de client Discord
 intents = discord.Intents.default()
