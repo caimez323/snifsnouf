@@ -10,8 +10,23 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db
 
+# Charger les var depuis .env
+load_dotenv()
+TOKEN = os.getenv('DISCORD_TOKEN')
 #credit.json
-cred = credentials.Certificate('var/config.json')
+cred = credentials.Certificate({
+  "type" : os.getenv("type"),
+  "project_id": os.getenv("project_id"),
+  "private_key_id": os.getenv("private_key_id"),
+  "private_key": os.getenv("private_key"),
+  "client_email": os.getenv("client_email"),
+  "client_id": os.getenv("client_id"),
+  "auth_uri": os.getenv("auth_uri"),
+  "token_uri": os.getenv("token_uri"),
+  "auth_provider_x509_cert_url": os.getenv("auth_provider_x509_cert_url"),
+  "client_x509_cert_url": os.getenv("client_x509_cert_url"),
+  "universe_domain": os.getenv("universe_domain")
+})
 firebase_admin.initialize_app(cred, {
   "databaseURL": "https://snifsnoufdataconnect-default-rtdb.europe-west1.firebasedatabase.app/",
 })
@@ -35,11 +50,6 @@ def count_a_tags(url):
 def isWebsiteUp(currList):
     return len(currList) == count_a_tags("https://caimez323.github.io/src/snifsnouf.html")
 
-
-# Charger le token depuis le fichier .env
-load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
-
 # Créer une instance de client Discord
 intents = discord.Intents.default()
 intents.message_content = True  # Pour permettre de lire le contenu des messages
@@ -48,18 +58,9 @@ client = discord.Client(intents=intents)
 
 bot_prefix = "$"
 
-#Au démarrage on load ce qui existe déjà dans la liste, 
-#Quand on tape une commande, on vient regarder dans la liste ici, et si besoin on rajoute dans le mainList.json en l'écrasant complètement
-
-
 def syncroFireBase(currList):
     for index,name in enumerate(currList):
         ref.child(str(index)).set(name)
-
-def initList():
-    with open("mainList.json","r") as jsonFile:
-        dataMain = json.load(jsonFile)["main"]
-    return dataMain
 
 def tryAddElem(newElem,currList):
     added = False
@@ -68,12 +69,6 @@ def tryAddElem(newElem,currList):
         added = True
         dList.append(newElem)
     return dList,added
-
-
-def overwriteList(currList):
-    payload = {"main": currList}
-    with open("mainList.json","w") as jsonFile:
-        json.dump(payload,jsonFile,indent=4)
 
 def createBat(currList):
     with open("macro.bat",'w') as batFile:
@@ -85,8 +80,7 @@ def createBat(currList):
         batFile.write('\nendlocal\nexit')
 
 
-mainList = initList()
-print(len(mainList))
+mainList = ref.get()
 
 @client.event
 async def on_ready():
@@ -108,7 +102,6 @@ async def on_message(message):
     if message.content.startswith(bot_prefix+'addList'): # Ajoute une valeur à la liste si elle est pas déjà ajoutée
         newName = message.content.replace(bot_prefix+'addList ',"").upper()
         mainList,added = tryAddElem(newName,mainList)
-        if added: overwriteList(mainList)
 
         displayString = "Element ajouté. Merci !" if added else "Element déjà présent"
         await message.channel.send(displayString)
@@ -122,14 +115,22 @@ async def on_message(message):
         await message.channel.send(file=attachment,content='Liste Macro créée')
 
     if message.content == bot_prefix+'isWebUp' or message.content == bot_prefix+'iwu':
-        displayString = "Site web à jour" if isWebsiteUp(mainList) else "Le site n'est pas à jour, appelez Batman"
+        displayString = "Database local non syncronisée" if ref.get() != mainList else "Les databases sont syncros"
         await message.channel.send(displayString)
-    #TODO CHANGE ACCORDING TO DATAS IN FIREBASE DATABASE RATHER THAN SCRAPPING
 
     if message.content == bot_prefix+'dataSync':
+        await message.channel.send("Syncronisation.... (cela peut prendre quelques secondes)")
         syncroFireBase(mainList)
         await message.channel.send("Données du bot syncronisées avec le site")
     
-
+    if message.content == bot_prefix+"snifHelp":
+        displayString = "Liste des commandes : \n"
+        displayString +="> **$list** : permet de lister les créateurs déjà enregistrés \n"
+        displayString +="> **$addList** : permet d'ajoute un créateur à la liste\n"
+        displayString +="> **$webList** : permet de donner le site internet\n"
+        displayString +="> **$macro** : permet de générer une macro téléchargeable pour tout ouvrir d'un coup\n"
+        displayString +="> **$iwu** : permet de voir si la database est syncro avec le snifSnouf\n"
+        displayString +="> **$dataSync** : permet de syncroniser\n"
+        await message.channel.send(displayString)
 # Lancer le bot
 client.run(TOKEN)
