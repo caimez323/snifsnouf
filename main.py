@@ -8,7 +8,6 @@ from firebase_admin import db
 
 # Charger les var depuis .env
 load_dotenv()
-TOKEN = os.getenv('DISCORD_TOKEN')
 #credit.json
 cred = credentials.Certificate({
   "type" : os.getenv("type"),
@@ -28,13 +27,7 @@ firebase_admin.initialize_app(cred, {
 })
 ref = db.reference('/')  # starting point
 
-# Créer une instance de client Discord
-intents = discord.Intents.default()
-intents.message_content = True  # Pour permettre de lire le contenu des messages
-
-client = discord.Client(intents=intents)
-
-bot_prefix = "$"
+bot_prefix = "!"
 
 def syncroFireBase(currList):
     for index,name in enumerate(currList):
@@ -58,19 +51,10 @@ def createBat(currList):
         batFile.write('\nendlocal\nexit')
 
 
-mainList = ref.get()
 
-@client.event
-async def on_ready():
-    print(f'{client.user} s\'est connecté !')
+async def snifSnoufFct(message):
 
-@client.event
-async def on_message(message):
-    global mainList
-    # Ne pas répondre à soi-même
-    if message.author == client.user:
-        return
-
+    mainList = ref.get()
     if message.content == bot_prefix+'list': # Affiche la liste en clair
         disString =""
         for name in mainList:
@@ -110,5 +94,4 @@ async def on_message(message):
         displayString +="> **$iwu** : permet de voir si la database est syncro avec le snifSnouf\n"
         displayString +="> **$dataSync** : permet de syncroniser\n"
         await message.channel.send(displayString)
-# Lancer le bot
-client.run(TOKEN)
+
