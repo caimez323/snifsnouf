@@ -1,3 +1,0 @@
-.env
-*.bat
-/var/secret.json
